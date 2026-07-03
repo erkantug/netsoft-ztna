@@ -1,0 +1,32 @@
+#cloud-config
+autoinstall:
+  version: 1
+  identity:
+    hostname: netsoft-ztna
+    username: netsoft
+    password: "$6$exDY1mhS4KUYCE/2$zmn9ToZwBKLz3Q5o6EKPd3U5mG.vN9EbpRAJBdQqTgLEp0JhTgP7qA6vPNgLOakH5sHn3KJqEoYQZ5bhHKm1w/"  # netsoft
+  ssh:
+    install_server: true
+    allow_pw: true
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  timezone: UTC
+  network:
+    network:
+      version: 2
+      ethernets:
+        ens160:
+          dhcp4: true
+  storage:
+    layout:
+      name: lvm
+    swap:
+      size: 0
+  packages:
+    - openssh-server
+    - cloud-guest-utils
+  late-commands:
+    - echo 'netsoft ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/netsoft
+    - chmod 440 /target/etc/sudoers.d/netsoft
+    - sed -i 's/^PasswordAuthentication.*/PasswordAuthentication yes/' /target/etc/ssh/sshd_config
