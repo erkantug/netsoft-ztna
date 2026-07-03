@@ -1,11 +1,12 @@
-# Netsoft ZTNA - Packer OVA Build Template
+# Netsoft ZTNA - Packer Build Template (QEMU → OVA)
 # Build: packer build -var 'version=1.0.0' ubuntu-24.04.pkr.hcl
+# Output: .ova file (VMware compatible)
 
 packer {
   required_plugins {
-    vmware = {
+    qemu = {
       version = ">= 1.1.0"
-      source  = "github.com/hashicorp/vmware"
+      source  = "github.com/hashicorp/qemu"
     }
   }
 }
@@ -51,88 +52,51 @@ variable "ssh_password" {
   default = "netsoft"
 }
 
-# VMware ISO builder
-source "vmware-iso" "netsoft-ztna" {
-  # VM Specs
-  vm_name              = "${var.vm_name}-${var.version}"
-  display_name         = "Netsoft ZTNA v${var.version}"
-  guest_os_type        = "ubuntu-64"
-  disk_size            = 32768
-  disk_adapter_type    = "pvscsi"
-  disk_type_id         = "thin"
-  memory               = 4096
-  cpus                 = 2
-  cores                = 2
+# QEMU builder (works on any Linux, produces VMDK)
+source "qemu" "netsoft-ztna" {
+  vm_name          = "${var.vm_name}-${var.version}"
+  disk_size        = 32768
+  disk_interface   = "virtio"
+  disk_cache       = "writeback"
+  format           = "qcow2"
+  net_device       = "virtio-net"
+  memory           = 4096
+  cpus             = 2
+  qemu_binary      = "/usr/bin/qemu-system-x86_64"
+  accelerator      = "kvm"
+  use_default_display = false
 
-  # Network
-  network_adapter_type = "vmxnet3"
+  iso_url           = var.iso_url
+  iso_checksum      = var.iso_checksum
+  http_directory    = "http"
 
-  # ISO
-  iso_url              = var.iso_url
-  iso_checksum         = var.iso_checksum
-
-  # HTTP directory for autoinstall
-  http_directory       = "http"
-
-  # Boot command for Ubuntu 24.04 autoinstall
-  boot_wait            = "5s"
+  boot_wait         = "10s"
+  boot_key_interval = "10ms"
   boot_command = [
-    "<wait5>c<wait>",
-    "linux /casper/vmlinuz autoinstall ds=nocloud-net;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ ",
-    "ip=dhcp url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ubuntu-24.04.squashfs ",
-    "--- quiet",
-    "<enter>",
-    "initrd /casper/initrd",
-    "<enter>",
-    "boot",
-    "<enter>"
+    "c<wait>",
+    "linux /casper/vmlinuz autoinstall ds=nocloud-net;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ ---<enter>",
+    "initrd /casper/initrd<enter>",
+    "boot<enter>"
   ]
 
-  # SSH connection for provisioning
   communicator          = "ssh"
   ssh_username          = var.ssh_username
   ssh_password          = var.ssh_password
-  ssh_port              = 22
   ssh_timeout           = "30m"
   ssh_handshake_attempts = 100
 
-  # Output
-  format               = "ova"
-  output_directory     = "${var.output_dir}/${var.vm_name}-${var.version}"
-  vmdk_name            = "${var.vm_name}-disk"
-
-  # Skip export if we want raw VMX instead of OVA
-  skip_export          = false
-
-  # Shutdown
   shutdown_command     = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
   shutdown_timeout     = "10m"
 
-  # VMware settings
-  vmx_data = {
-    "mks.enable3d"            = "FALSE"
-    "svga.autodetect"         = "FALSE"
-    "vhv.enable"              = "TRUE"
-    "ethernet0.virtualDev"    = "vmxnet3"
-    "scsi0.virtualDev"        = "pvscsi"
-    "guestinfo.metadata"      = ""
-    "guestinfo.userdata"      = ""
-    "guestinfo.vendordata"    = ""
-  }
-
-  # Remove VMware tools warning
-  vmx_remove_ethernet_interfaces = false
+  output_directory     = "${var.output_dir}/${var.vm_name}-${var.version}"
+  headless             = true
 }
 
 # Build
 build {
-  sources = ["source.vmware-iso.netsoft-ztna"]
+  sources = ["source.qemu.netsoft-ztna"]
 
-  # ==========================================
-  # Provisioning
-  # ==========================================
-
-  # 1. Wait for cloud-init to finish
+  # 1. Wait for cloud-init
   provisioner "shell" {
     inline = [
       "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do sleep 2; done",
@@ -142,9 +106,7 @@ build {
 
   # 2. System updates + base packages
   provisioner "shell" {
-    environment_vars = [
-      "DEBIAN_FRONTEND=noninteractive"
-    ]
+    environment_vars = ["DEBIAN_FRONTEND=noninteractive"]
     inline = [
       "sudo apt-get update -qq",
       "sudo apt-get upgrade -y -qq",
@@ -155,9 +117,7 @@ build {
 
   # 3. Install Docker CE
   provisioner "shell" {
-    environment_vars = [
-      "DEBIAN_FRONTEND=noninteractive"
-    ]
+    environment_vars = ["DEBIAN_FRONTEND=noninteractive"]
     inline = [
       "sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg",
       "echo 'deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable' | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
@@ -181,40 +141,35 @@ build {
     ]
   }
 
-  # 5. Upload wizard binary
+  # 5. Wizard binary
   provisioner "file" {
     source      = var.wizard_binary
     destination = "/tmp/netsoft-wizard"
   }
-
   provisioner "shell" {
     inline = [
       "sudo mv /tmp/netsoft-wizard /usr/local/bin/netsoft-wizard",
-      "sudo chmod 755 /usr/local/bin/netsoft-wizard",
-      "echo 'Wizard binary installed'"
+      "sudo chmod 755 /usr/local/bin/netsoft-wizard"
     ]
   }
 
-  # 6. Upload web UI files
+  # 6. Web UI files
   provisioner "file" {
     source      = "../web"
     destination = "/tmp/web"
   }
-
   provisioner "shell" {
     inline = [
       "sudo cp -r /tmp/web/* /opt/netsoft/web/",
-      "sudo rm -rf /tmp/web",
-      "echo 'Web UI files installed'"
+      "sudo rm -rf /tmp/web"
     ]
   }
 
-  # 7. Upload scripts
+  # 7. Scripts + systemd
   provisioner "file" {
     source      = "../scripts"
     destination = "/tmp/scripts"
   }
-
   provisioner "shell" {
     inline = [
       "sudo cp /tmp/scripts/first-boot.sh /opt/netsoft/scripts/first-boot.sh",
@@ -224,8 +179,7 @@ build {
       "sudo cp /tmp/scripts/netsoft-first-boot.service /etc/systemd/system/netsoft-first-boot.service",
       "sudo systemctl daemon-reload",
       "sudo systemctl enable netsoft-first-boot.service",
-      "sudo rm -rf /tmp/scripts",
-      "echo 'Scripts and services installed'"
+      "sudo rm -rf /tmp/scripts"
     ]
   }
 
@@ -234,8 +188,7 @@ build {
     inline = [
       "sudo sed -i 's/^#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config",
       "sudo sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config",
-      "sudo systemctl restart sshd",
-      "echo 'SSH hardened'"
+      "sudo systemctl restart sshd"
     ]
   }
 
@@ -252,8 +205,7 @@ build {
       "sudo ufw allow 3478/tcp comment 'STUN'",
       "sudo ufw allow 3478/udp comment 'STUN'",
       "sudo ufw allow 10000/tcp comment 'Signal'",
-      "sudo ufw --force enable",
-      "echo 'Firewall configured'"
+      "sudo ufw --force enable"
     ]
   }
 
@@ -266,13 +218,11 @@ build {
       "sudo rm -f /etc/machine-id",
       "sudo rm -f /var/lib/dbus/machine-id",
       "sudo truncate -s 0 /etc/hostname",
-      "sudo dd if=/dev/zero of=/zero bs=1M || true",
-      "sudo rm -f /zero",
-      "echo 'Cleanup complete'"
+      "sync"
     ]
   }
 
-  # 11. Verify installation
+  # 11. Verify
   provisioner "shell" {
     inline = [
       "echo '=== Verification ==='",
@@ -280,9 +230,102 @@ build {
       "docker --version",
       "docker compose version",
       "systemctl is-enabled netsoft-first-boot.service",
-      "ls -la /opt/netsoft/",
       "ls /opt/netsoft/web/templates/",
       "echo '=== Verification Complete ==='"
+    ]
+  }
+
+  # 12. Post-build: convert QCOW2 → VMDK → OVA
+  provisioner "shell-local" {
+    environment_vars = [
+      "OUTDIR=${var.output_dir}/${var.vm_name}-${var.version}",
+      "VMNAME=${var.vm_name}-${var.version}",
+      "DISK_GB=32"
+    ]
+    inline = [
+      "echo '=== Creating OVA from QCOW2 ==='",
+      "cd \"$OUTDIR\"",
+      "QCOW2=$(ls *.qcow2 | head -1)",
+      "echo \"Source: $QCOW2\"",
+
+      "# Convert to VMDK (streamOptimized for VMware)",
+      "qemu-img convert -O vmdk -o subformat=streamOptimized \"$QCOW2\" \"$${VMNAME}-disk.vmdk\"",
+      "echo \"VMDK: $(ls -lh $${VMNAME}-disk.vmdk | awk '{print $5}')\"",
+
+      "# Build OVF descriptor",
+      "cat > \"$${VMNAME}.ovf\" << 'OVFEOF'",
+      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+      "<Envelope vmw:buildId=\"build-1\" xmlns=\"http://schemas.dmtf.org/ovf/envelope/1\" xmlns:vmw=\"http://www.vmware.com/schema/ovf\" xmlns:vssd=\"http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/SystemVirtualizationSettings\" xmlns:rasd=\"http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/ResourceAllocationSettingData\">",
+      "  <References>",
+      "    <File ovf:href=\"$${VMNAME}-disk.vmdk\" ovf:id=\"file1\" ovf:size=\"0\"/>",
+      "  </References>",
+      "  <DiskSection>",
+      "    <Info>Virtual disk information</Info>",
+      "    <Disk ovf:capacity=\"$${DISK_GB}\" ovf:capacityAllocationUnits=\"byte * 2^30\" ovf:diskId=\"vmdisk1\" ovf:fileRef=\"file1\" ovf:format=\"http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized\"/>",
+      "  </DiskSection>",
+      "  <NetworkSection>",
+      "    <Info>Logical networks</Info>",
+      "    <Network ovf:name=\"VM Network\">",
+      "      <Description>The VM Network</Description>",
+      "    </Network>",
+      "  </NetworkSection>",
+      "  <VirtualSystem ovf:id=\"$${VMNAME}\">",
+      "    <Info>Netsoft ZTNA Virtual Appliance</Info>",
+      "    <Name>$${VMNAME}</Name>",
+      "    <OperatingSystemSection ovf:id=\"100\">",
+      "      <Info>Ubuntu 24.04 LTS</Info>",
+      "    </OperatingSystemSection>",
+      "    <VirtualHardwareSection>",
+      "      <Info>Virtual hardware requirements</Info>",
+      "      <System>",
+      "        <vssd:ElementName>Virtual Hardware Family</vssd:ElementName>",
+      "        <vssd:InstanceID>0</vssd:InstanceID>",
+      "        <vssd:VirtualSystemIdentifier>$${VMNAME}</vssd:VirtualSystemIdentifier>",
+      "        <vssd:VirtualSystemType>vmx-21</vssd:VirtualSystemType>",
+      "      </System>",
+      "      <Item>",
+      "        <rasd:AllocationUnits>hertz * 10^6</rasd:AllocationUnits>",
+      "        <rasd:Description>Number of virtual CPUs</rasd:Description>",
+      "        <rasd:ElementName>2 virtual CPU(s)</rasd:ElementName>",
+      "        <rasd:InstanceID>1</rasd:InstanceID>",
+      "        <rasd:ResourceType>3</rasd:ResourceType>",
+      "        <rasd:VirtualQuantity>2</rasd:VirtualQuantity>",
+      "      </Item>",
+      "      <Item>",
+      "        <rasd:AllocationUnits>byte * 2^20</rasd:AllocationUnits>",
+      "        <rasd:Description>Memory Size</rasd:Description>",
+      "        <rasd:ElementName>4096 MB of memory</rasd:ElementName>",
+      "        <rasd:InstanceID>2</rasd:InstanceID>",
+      "        <rasd:ResourceType>4</rasd:ResourceType>",
+      "        <rasd:VirtualQuantity>4096</rasd:VirtualQuantity>",
+      "      </Item>",
+      "      <Item>",
+      "        <rasd:AllocationUnits>byte * 2^30</rasd:AllocationUnits>",
+      "        <rasd:Description>Virtual Disk</rasd:Description>",
+      "        <rasd:ElementName>32 GB Virtual Disk</rasd:ElementName>",
+      "        <rasd:HostResource>ovf:/disk/vmdisk1</rasd:HostResource>",
+      "        <rasd:InstanceID>3</rasd:InstanceID>",
+      "        <rasd:ResourceType>17</rasd:ResourceType>",
+      "        <rasd:VirtualQuantity>32</rasd:VirtualQuantity>",
+      "      </Item>",
+      "      <Item>",
+      "        <rasd:AutomaticAllocation>true</rasd:AutomaticAllocation>",
+      "        <rasd:Connection>VM Network</rasd:Connection>",
+      "        <rasd:ElementName>Ethernet adapter</rasd:ElementName>",
+      "        <rasd:InstanceID>4</rasd:InstanceID>",
+      "        <rasd:ResourceType>10</rasd:ResourceType>",
+      "      </Item>",
+      "      <vmw:ExtraConfig ovf:required=\"false\" vmw:key=\"vmx.allowNested\">TRUE</vmw:ExtraConfig>",
+      "    </VirtualHardwareSection>",
+      "  </VirtualSystem>",
+      "</Envelope>",
+      "OVFEOF",
+
+      "# Create OVA (tar archive)",
+      "tar -cf \"$${VMNAME}.ova\" \"$${VMNAME}.ovf\" \"$${VMNAME}-disk.vmdk\"",
+      "echo \"=== OVA: $(ls -lh $${VMNAME}.ova | awk '{print $9, $5}')\"",
+      "# Cleanup intermediate files",
+      "rm -f \"$${VMNAME}.ovf\" \"$${VMNAME}-disk.vmdk\" \"$QCOW2\""
     ]
   }
 }
