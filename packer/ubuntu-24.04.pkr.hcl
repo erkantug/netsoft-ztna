@@ -63,8 +63,6 @@ source "vmware-iso" "netsoft-ztna" {
   memory               = 4096
   cpus                 = 2
   cores                = 2
-  audio                = false
-  usb                  = false
 
   # Network
   network_adapter_type = "vmxnet3"
@@ -102,7 +100,6 @@ source "vmware-iso" "netsoft-ztna" {
   format               = "ova"
   output_directory     = "${var.output_dir}/${var.vm_name}-${var.version}"
   vmdk_name            = "${var.vm_name}-disk"
-  ova_name             = "${var.vm_name}-${var.version}"
 
   # Skip export if we want raw VMX instead of OVA
   skip_export          = false
