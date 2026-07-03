@@ -1,0 +1,24 @@
+[Unit]
+Description=Netsoft ZTNA Setup Wizard
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+ConditionPathExists=!/opt/netsoft/.deployed
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/netsoft-wizard
+Restart=on-failure
+RestartSec=5
+User=netbird
+Group=netbird
+WorkingDirectory=/opt/netsoft
+Environment=NETSOFT_DATA_DIR=/opt/netsoft/data
+Environment=NETSOFT_STACK_DIR=/opt/netsoft/stack
+Environment=NETSOFT_WEB_DIR=/opt/netsoft/web
+Environment=NETSOFT_CERT_DIR=/etc/netsoft/certs
+Environment=NETSOFT_LOG_DIR=/var/log/netsoft
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,75 @@
+<div hx-ext="response-targets">
+    <div class="bg-white shadow rounded-lg p-8">
+        <h2 class="text-2xl font-bold text-gray-900">Identity Provider</h2>
+        <p class="mt-2 text-gray-600">Choose how users authenticate to the NetBird dashboard.</p>
+
+        <form hx-post="/api/step/4" hx-target="#step-content" hx-swap="innerHTML" class="mt-8 space-y-6">
+            <div class="space-y-4">
+                <label class="flex items-start gap-3 rounded-lg border border-gray-200 p-4 cursor-pointer hover:border-indigo-300">
+                    <input type="radio" name="provider" value="local" {{if eq .provider "local"}}checked{{end}} class="mt-1">
+                    <div>
+                        <div class="font-medium text-gray-900">Local Users</div>
+                        <div class="text-sm text-gray-500">Users managed directly in NetBird. Simple and self-contained.</div>
+                    </div>
+                </label>
+
+                <label class="flex items-start gap-3 rounded-lg border border-gray-200 p-4 cursor-pointer hover:border-indigo-300">
+                    <input type="radio" name="provider" value="entra" {{if eq .provider "entra"}}checked{{end}} class="mt-1">
+                    <div>
+                        <div class="font-medium text-gray-900">Entra ID (Azure AD)</div>
+                        <div class="text-sm text-gray-500">Authenticate with your corporate Microsoft 365 credentials.</div>
+                    </div>
+                </label>
+            </div>
+
+            <div id="entra-options" class="hidden space-y-4 border-l-4 border-blue-400 pl-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Tenant ID</label>
+                    <input type="text" name="tenant_id" value="{{.tenant_id}}"
+                        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono text-sm"
+                        placeholder="00000000-0000-0000-0000-000000000000">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Client ID</label>
+                    <input type="text" name="client_id" value="{{.client_id}}"
+                        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono text-sm"
+                        placeholder="00000000-0000-0000-0000-000000000000">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Client Secret</label>
+                    <input type="password" name="client_secret" value="{{.client_secret}}"
+                        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        placeholder="Client secret from Azure AD">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Allowed Domain (optional)</label>
+                    <input type="text" name="allowed_domain" value="{{.allowed_domain}}"
+                        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        placeholder="sirketim.com">
+                    <p class="mt-1 text-xs text-gray-500">Restrict access to this domain only</p>
+                </div>
+            </div>
+
+            <div class="flex justify-between">
+                <button type="button" onclick="history.back()"
+                    class="rounded-md bg-gray-100 px-6 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200">
+                    ← Back
+                </button>
+                <button type="submit"
+                    class="rounded-md bg-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                    Next →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function toggleIDPOptions() {
+        const method = document.querySelector('input[name="provider"]:checked');
+        if (!method) return;
+        document.getElementById('entra-options').classList.toggle('hidden', method.value !== 'entra');
+    }
+    document.querySelectorAll('input[name="provider"]').forEach(el => el.addEventListener('change', toggleIDPOptions));
+    toggleIDPOptions();
+</script>

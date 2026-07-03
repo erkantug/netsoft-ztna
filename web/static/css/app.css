@@ -1,0 +1,66 @@
+/* Netsoft ZTNA Wizard - TailwindCSS */
+
+/* Step indicators */
+.step-indicator {
+    @apply flex flex-col items-center;
+}
+.step-indicator .step-circle {
+    @apply flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold;
+    @apply bg-gray-200 text-gray-500;
+}
+.step-indicator.active .step-circle {
+    @apply bg-indigo-600 text-white;
+}
+.step-indicator .step-label {
+    @apply mt-1 text-xs text-gray-500;
+}
+.step-indicator.active .step-label {
+    @apply text-indigo-600 font-medium;
+}
+.step-line {
+    @apply h-0.5 w-12 bg-gray-200;
+}
+.step-line.active {
+    @apply bg-indigo-600;
+}
+
+/* Loading animation */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Custom scrollbar for log */
+#log-output {
+    max-height: 400px;
+    overflow-y: auto;
+}
+#log-output::-webkit-scrollbar {
+    width: 6px;
+}
+#log-output::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+#log-output::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 3px;
+}
+
+/* Form styling */
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+textarea:focus {
+    @apply ring-2 ring-indigo-500 border-indigo-500;
+}
+
+/* HTMX transitions */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

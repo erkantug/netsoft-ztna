@@ -1,0 +1,16 @@
+# Binaries
+netsoft-wizard
+*.test
+*.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+/tmp/

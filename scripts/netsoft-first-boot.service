@@ -1,0 +1,15 @@
+[Unit]
+Description=Netsoft ZTNA First Boot Setup
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/opt/netsoft/.deployed
+
+[Service]
+Type=oneshot
+ExecStart=/opt/netsoft/scripts/first-boot.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

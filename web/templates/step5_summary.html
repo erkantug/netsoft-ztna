@@ -1,0 +1,78 @@
+<div>
+    <div class="bg-white shadow rounded-lg p-8">
+        <h2 class="text-2xl font-bold text-gray-900">Summary & Deploy</h2>
+        <p class="mt-2 text-gray-600">Review your configuration before deploying.</p>
+
+        <div class="mt-8 space-y-4">
+            <div class="rounded-lg border border-gray-200 p-4">
+                <h3 class="font-semibold text-gray-900">Network</h3>
+                <dl class="mt-2 grid grid-cols-2 gap-2 text-sm">
+                    <dt class="text-gray-500">Domain:</dt>
+                    <dd>{{.network.domain}}</dd>
+                    <dt class="text-gray-500">IP:</dt>
+                    <dd>{{.network.ip}}</dd>
+                </dl>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 p-4">
+                <h3 class="font-semibold text-gray-900">TLS</h3>
+                <p class="mt-1 text-sm text-gray-600">
+                    {{if eq .tls.method "letsencrypt"}}Let's Encrypt ({{.tls.email}}){{end}}
+                    {{if eq .tls.method "custom"}}Custom Certificate{{end}}
+                    {{if eq .tls.method "selfsigned"}}Self-Signed (Development Only){{end}}
+                </p>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 p-4">
+                <h3 class="font-semibold text-gray-900">Admin</h3>
+                <p class="mt-1 text-sm text-gray-600">Username: {{.admin.username}}</p>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 p-4">
+                <h3 class="font-semibold text-gray-900">Identity Provider</h3>
+                <p class="mt-1 text-sm text-gray-600">
+                    {{if eq .idp.provider "local"}}Local Users{{end}}
+                    {{if eq .idp.provider "entra"}}Entra ID (Azure AD){{end}}
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-8 flex justify-between">
+            <button type="button" onclick="history.back()"
+                class="rounded-md bg-gray-100 px-6 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200">
+                ← Back
+            </button>
+            <button onclick="startDeploy()"
+                class="rounded-md bg-green-600 px-8 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-500">
+                🚀 Deploy NetBird
+            </button>
+        </div>
+    </div>
+
+    <!-- Deploy Log (hidden initially) -->
+    <div id="deploy-log" class="hidden mt-6">
+        <div class="bg-gray-900 rounded-lg p-6">
+            <h3 class="text-sm font-semibold text-gray-400 mb-4">Deployment Log</h3>
+            <div id="log-output" class="space-y-1 font-mono text-sm"></div>
+        </div>
+    </div>
+
+    <!-- Completion (hidden) -->
+    <div id="deploy-complete" class="hidden mt-6">
+        <div class="bg-white shadow rounded-lg p-8 text-center">
+            <div class="text-5xl mb-4">🎉</div>
+            <h2 class="text-2xl font-bold text-gray-900">NetBird Deployed!</h2>
+            <p class="mt-4 text-gray-600">Your NetBird Zero Trust network is ready.</p>
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg inline-block">
+                <p class="text-sm text-gray-500">Dashboard URL:</p>
+                <p class="text-lg font-mono font-bold text-indigo-600">https://{{.network.domain}}</p>
+            </div>
+            <div class="mt-6">
+                <button onclick="location.reload()"
+                    class="rounded-md bg-indigo-600 px-6 py-3 text-white hover:bg-indigo-700">
+                    Go to Dashboard
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,86 @@
+<div hx-ext="response-targets">
+    <div class="bg-white shadow rounded-lg p-8">
+        <h2 class="text-2xl font-bold text-gray-900">TLS / SSL Certificate</h2>
+        <p class="mt-2 text-gray-600">Secure your NetBird dashboard with TLS.</p>
+
+        <form hx-post="/api/step/2" hx-target="#step-content" hx-swap="innerHTML" class="mt-8 space-y-6">
+            <div class="space-y-4">
+                <label class="block text-sm font-medium text-gray-700">Certificate Method</label>
+
+                <label class="flex items-start gap-3 rounded-lg border border-gray-200 p-4 cursor-pointer hover:border-indigo-300">
+                    <input type="radio" name="method" value="letsencrypt" {{if eq .method "letsencrypt"}}checked{{end}} class="mt-1">
+                    <div>
+                        <div class="font-medium text-gray-900">Let's Encrypt (Recommended)</div>
+                        <div class="text-sm text-gray-500">Free, automatic certificate. Requires port 80 to be publicly reachable.</div>
+                    </div>
+                </label>
+
+                <label class="flex items-start gap-3 rounded-lg border border-gray-200 p-4 cursor-pointer hover:border-indigo-300">
+                    <input type="radio" name="method" value="custom" {{if eq .method "custom"}}checked{{end}} class="mt-1">
+                    <div>
+                        <div class="font-medium text-gray-900">Custom Certificate</div>
+                        <div class="text-sm text-gray-500">Upload your own PEM certificate and private key.</div>
+                    </div>
+                </label>
+
+                <label class="flex items-start gap-3 rounded-lg border border-gray-200 p-4 cursor-pointer hover:border-indigo-300">
+                    <input type="radio" name="method" value="selfsigned" {{if eq .method "selfsigned"}}checked{{end}} class="mt-1">
+                    <div>
+                        <div class="font-medium text-gray-900">Self-Signed (Development)</div>
+                        <div class="text-sm text-gray-500">Generated automatically. Browser will show a warning.</div>
+                    </div>
+                </label>
+            </div>
+
+            <div id="letsencrypt-options" class="hidden space-y-4 border-l-4 border-green-400 pl-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email (for renewal notices)</label>
+                    <input type="email" name="email" value="{{.email}}"
+                        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        placeholder="admin@sirketim.com">
+                </div>
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" name="acme_terms_agreed" value="true" {{if .acme_terms_agreed}}checked{{end}}>
+                    <span class="text-sm text-gray-600">I agree to the Let's Encrypt Subscriber Agreement</span>
+                </label>
+            </div>
+
+            <div id="custom-options" class="hidden space-y-4 border-l-4 border-yellow-400 pl-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Certificate (PEM)</label>
+                    <textarea name="cert_pem" rows="4"
+                        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono text-xs"
+                        placeholder="-----BEGIN CERTIFICATE-----&#10;...">{{.cert_pem}}</textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Private Key (PEM)</label>
+                    <textarea name="key_pem" rows="4"
+                        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono text-xs"
+                        placeholder="-----BEGIN PRIVATE KEY-----&#10;...">{{.key_pem}}</textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-between">
+                <button type="button" onclick="history.back()"
+                    class="rounded-md bg-gray-100 px-6 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200">
+                    ← Back
+                </button>
+                <button type="submit"
+                    class="rounded-md bg-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                    Next →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function toggleTLSOptions() {
+        const method = document.querySelector('input[name="method"]:checked');
+        if (!method) return;
+        document.getElementById('letsencrypt-options').classList.toggle('hidden', method.value !== 'letsencrypt');
+        document.getElementById('custom-options').classList.toggle('hidden', method.value !== 'custom');
+    }
+    document.querySelectorAll('input[name="method"]').forEach(el => el.addEventListener('change', toggleTLSOptions));
+    toggleTLSOptions();
+</script>

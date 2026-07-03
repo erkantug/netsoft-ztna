@@ -1,0 +1,45 @@
+<div hx-ext="response-targets">
+    <div class="bg-white shadow rounded-lg p-8">
+        <h2 class="text-2xl font-bold text-gray-900">Network Configuration</h2>
+        <p class="mt-2 text-gray-600">Configure the network settings for your NetBird appliance.</p>
+
+        <form hx-post="/api/step/1" hx-target="#step-content" hx-swap="innerHTML" class="mt-8 space-y-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Domain Name (FQDN)</label>
+                <input type="text" name="domain" value="{{.domain}}" required
+                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    placeholder="netbird.sirketim.com">
+                <p class="mt-1 text-xs text-gray-500">This will be the NetBird dashboard address</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Management IP</label>
+                <input type="text" name="ip" value="{{.ip}}" 
+                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    placeholder="DHCP (leave empty for DHCP)">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">DNS Server</label>
+                    <input type="text" name="dns" value="{{.dns}}"
+                        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        placeholder="8.8.8.8">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">NTP Server</label>
+                    <input type="text" name="ntp" value="{{.ntp}}"
+                        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        placeholder="pool.ntp.org">
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit"
+                    class="rounded-md bg-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    Next →
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
